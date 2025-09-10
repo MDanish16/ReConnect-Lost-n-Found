@@ -1,0 +1,262 @@
+
+import React, { useState } from "react";
+import { Item } from "@/entities/Item";
+import { UploadFile } from "@/integrations/Core";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Upload, Image as ImageIcon, Calendar, MapPin, Tag, User, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
+
+import ImageUpload from "../components/submit/ImageUpload";
+
+const CATEGORIES = [
+  { value: "electronics", label: "Electronics" },
+  { value: "accessories", label: "Accessories" },
+  { value: "documents", label: "Documents" },
+  { value: "clothing", label: "Clothing" },
+  { value: "bags", label: "Bags & Luggage" },
+  { value: "keys", label: "Keys" },
+  { value: "jewelry", label: "Jewelry" },
+  { value: "other", label: "Other" }
+];
+
+export default function SubmitPage() {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    date_lost_found: "",
+    location: "",
+    status: "lost",
+    category: "other",
+    contact_info: ""
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setError("");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsUploading(true);
+    setError("");
+
+    try {
+      let imageUrl = "";
+      
+      if (imageFile) {
+        const uploadResult = await UploadFile({ file: imageFile });
+        imageUrl = uploadResult.file_url;
+      }
+
+      const itemData = {
+        ...formData,
+        image_url: imageUrl
+      };
+
+      await Item.create(itemData);
+      navigate(createPageUrl("Items"));
+    } catch (error) {
+      setError("Error submitting item. Please try again.");
+      console.error("Error creating item:", error);
+    }
+
+    setIsUploading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Card className="shadow-2xl border border-gray-700 bg-gray-800">
+          <CardHeader className="bg-gradient-to-r from-gray-800 to-gray-700 rounded-t-lg border-b border-gray-600">
+            <CardTitle className="text-2xl md:text-3xl font-bold text-white text-center">
+              {formData.status === "lost" ? "Report Lost Item" : "Report Found Item"}
+            </CardTitle>
+            <p className="text-gray-400 text-center mt-2">
+              Help us reunite this item with its owner by providing detailed information
+            </p>
+          </CardHeader>
+          
+          <CardContent className="p-8">
+            {error && (
+              <Alert variant="destructive" className="mb-6 bg-red-900/20 border-red-800 text-red-400">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Status Toggle */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold flex items-center gap-2 text-gray-200">
+                  <Tag className="w-5 h-5" />
+                  Item Status
+                </Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleInputChange("status", value)}
+                >
+                  <SelectTrigger className="h-12 rounded-xl bg-gray-700 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    <SelectItem value="lost" className="text-white">Lost - I lost this item</SelectItem>
+                    <SelectItem value="found" className="text-white">Found - I found this item</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Item Name */}
+              <div className="space-y-3">
+                <Label htmlFor="name" className="text-base font-semibold text-gray-200">
+                  Item Name *
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="e.g., iPhone 13, Black Wallet, Silver Ring"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  className="h-12 rounded-xl bg-gray-700 border-gray-600 text-white placeholder-gray-500"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-3">
+                <Label htmlFor="description" className="text-base font-semibold text-gray-200">
+                  Description *
+                </Label>
+                <Textarea
+                  id="description"
+                  placeholder="Provide detailed description including color, brand, distinctive features, etc."
+                  value={formData.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
+                  className="min-h-24 rounded-xl bg-gray-700 border-gray-600 text-white placeholder-gray-500"
+                  required
+                />
+              </div>
+
+              {/* Date and Location */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label htmlFor="date" className="text-base font-semibold flex items-center gap-2 text-gray-200">
+                    <Calendar className="w-5 h-5" />
+                    Date {formData.status === "lost" ? "Lost" : "Found"} *
+                  </Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date_lost_found}
+                    onChange={(e) => handleInputChange("date_lost_found", e.target.value)}
+                    className="h-12 rounded-xl bg-gray-700 border-gray-600 text-white"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label htmlFor="location" className="text-base font-semibold flex items-center gap-2 text-gray-200">
+                    <MapPin className="w-5 h-5" />
+                    Location *
+                  </Label>
+                  <Input
+                    id="location"
+                    placeholder="e.g., Central Park, Starbucks on 5th Ave"
+                    value={formData.location}
+                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    className="h-12 rounded-xl bg-gray-700 border-gray-600 text-white placeholder-gray-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Category */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold text-gray-200">Category</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(value) => handleInputChange("category", value)}
+                >
+                  <SelectTrigger className="h-12 rounded-xl bg-gray-700 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    {CATEGORIES.map((category) => (
+                      <SelectItem key={category.value} value={category.value} className="text-white">
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold flex items-center gap-2 text-gray-200">
+                  <ImageIcon className="w-5 h-5" />
+                  Photo (Recommended)
+                </Label>
+                <ImageUpload 
+                  onImageSelect={setImageFile}
+                  selectedImage={imageFile}
+                />
+              </div>
+
+              {/* Contact Info */}
+              <div className="space-y-3">
+                <Label htmlFor="contact" className="text-base font-semibold flex items-center gap-2 text-gray-200">
+                  <User className="w-5 h-5" />
+                  Contact Information *
+                </Label>
+                <Input
+                  id="contact"
+                  placeholder="Your email or phone number"
+                  value={formData.contact_info}
+                  onChange={(e) => handleInputChange("contact_info", e.target.value)}
+                  className="h-12 rounded-xl bg-gray-700 border-gray-600 text-white placeholder-gray-500"
+                  required
+                />
+                <p className="text-sm text-gray-500">
+                  This will be shared with people who want to claim the item
+                </p>
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-4">
+                <Button
+                  type="submit"
+                  disabled={isUploading}
+                  className="w-full h-14 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      {imageFile ? "Uploading..." : "Submitting..."}
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5 mr-2" />
+                      Submit {formData.status === "lost" ? "Lost" : "Found"} Item
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

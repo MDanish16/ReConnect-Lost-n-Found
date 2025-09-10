@@ -1,0 +1,71 @@
+{
+  "name": "Item",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the lost/found item"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the item"
+    },
+    "date_lost_found": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the item was lost or found"
+    },
+    "location": {
+      "type": "string",
+      "description": "Location where item was lost or found"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL of uploaded image of the item"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "lost",
+        "found"
+      ],
+      "description": "Whether this item is lost or found"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "electronics",
+        "accessories",
+        "documents",
+        "clothing",
+        "bags",
+        "keys",
+        "jewelry",
+        "other"
+      ],
+      "default": "other",
+      "description": "Category of the item"
+    },
+    "contact_info": {
+      "type": "string",
+      "description": "Contact information of the person posting"
+    },
+    "is_claimed": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether someone has claimed this item"
+    },
+    "claim_details": {
+      "type": "string",
+      "description": "Details about who claimed the item"
+    }
+  },
+  "required": [
+    "name",
+    "description",
+    "date_lost_found",
+    "location",
+    "status",
+    "contact_info"
+  ]
+}

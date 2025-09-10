@@ -1,0 +1,175 @@
+
+import React, { useState, useEffect, useCallback } from "react";
+import { Item } from "@/entities/Item";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Search, Filter, MapPin, Calendar, Tag, ChevronDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import ItemCard from "../components/items/ItemCard";
+import SearchFilters from "../components/items/SearchFilters";
+
+export default function ItemsPage() {
+  const [items, setItems] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState({
+    status: "all",
+    category: "all",
+    location: "",
+    dateRange: "all"
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const loadItems = async () => {
+    setIsLoading(true);
+    const data = await Item.list("-created_date");
+    setItems(data);
+    setIsLoading(false);
+  };
+
+  const applyFilters = useCallback(() => {
+    let filtered = items.filter(item => !item.is_claimed);
+
+    // Search term
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.location.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (filters.status !== "all") {
+      filtered = filtered.filter(item => item.status === filters.status);
+    }
+
+    // Category filter
+    if (filters.category !== "all") {
+      filtered = filtered.filter(item => item.category === filters.category);
+    }
+
+    // Location filter
+    if (filters.location) {
+      filtered = filtered.filter(item =>
+        item.location.toLowerCase().includes(filters.location.toLowerCase())
+      );
+    }
+
+    // Date range filter
+    if (filters.dateRange !== "all") {
+      const now = new Date();
+      const days = parseInt(filters.dateRange);
+      const dateThreshold = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      filtered = filtered.filter(item => new Date(item.date_lost_found) >= dateThreshold);
+    }
+
+    setFilteredItems(filtered);
+  }, [items, searchTerm, filters]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  return (
+    <div className="min-h-screen bg-gray-900 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Lost & Found Items
+          </h1>
+          <p className="text-lg text-gray-400 mb-6">
+            Browse through {items.length} items waiting to be reunited with their owners.
+          </p>
+
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
+            <Input
+              placeholder="Search by item name, description, or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-12 pr-4 py-3 text-lg rounded-xl bg-gray-800 border-gray-600 text-white placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Filter Toggle */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 rounded-xl bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500"
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </Button>
+            <div className="text-sm text-gray-400">
+              {filteredItems.length} items found
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        {showFilters && (
+          <SearchFilters 
+            filters={filters}
+            setFilters={setFilters}
+            className="mb-8"
+          />
+        )}
+
+        {/* Items Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array(6).fill(0).map((_, i) => (
+              <div key={i} className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
+                <Skeleton className="h-48 w-full mb-4 rounded-lg bg-gray-700" />
+                <Skeleton className="h-6 w-3/4 mb-2 bg-gray-700" />
+                <Skeleton className="h-4 w-full mb-4 bg-gray-700" />
+                <div className="flex gap-2 mb-4">
+                  <Skeleton className="h-6 w-16 bg-gray-700" />
+                  <Skeleton className="h-6 w-20 bg-gray-700" />
+                </div>
+                <Skeleton className="h-10 w-full bg-gray-700" />
+              </div>
+            ))}
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-24 h-24 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6 border border-gray-700">
+              <Search className="w-12 h-12 text-gray-500" />
+            </div>
+            <h3 className="text-xl font-semibold text-white mb-2">No items found</h3>
+            <p className="text-gray-400 mb-6">Try adjusting your search or filters to see more results.</p>
+            <Link to={createPageUrl("Submit")}>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                Post a New Item
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredItems.map((item) => (
+              <ItemCard 
+                key={item.id} 
+                item={item}
+                onClaim={() => loadItems()} 
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
